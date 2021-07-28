@@ -120,7 +120,16 @@ C = sum(marktype == 4) - 1;
 % mex -g sfcsCarpet.cpp % for debugging in VS2019
 
 %% Generate Carpet
-
+% __Inputs:
+% deltat: width of each pixel in laser pulses -> cycleTime / Nc  -> different with circular vs line scans
+% Nc: number of points in each 'cycle'
+% C: number of cycles, i.e. how many complete revolutions in entire dataset
+% microt: ps collection window of photon between laser pulses
+% macrot: number of laser pulses from beginning of dataset - note, time zero is modified to be the start of the first line/circle
+% marktime: number of pulses count for the frame and start/stop markers
+% marktype: index of marker type: 1-frame, 4-line start, 2-line end
+% __Outputs:
+% pixCounts: 2D array of photon counts binned into 
 [pixCounts, photonCarpet] = sfcsCarpet(uint32(deltat), uint32(Nc), uint32(C), uint16(microt), uint64(macrot), uint64(marktime), uint8(marktype));
 
 

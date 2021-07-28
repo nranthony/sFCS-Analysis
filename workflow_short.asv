@@ -1,9 +1,24 @@
-%%  Set path
+%%  Import TTTR Data
 
 % note '' creates char arrays, while "" creates Matlab strings
-%fpath = 'C:\ici-cloud-sections\WBRB Abberior STED\2021\Neil\2021-07-13 - FCS JF cali\TimeHarp_2021-07-13_12-05-48_sFCS60pc_b_fast.ptu';
+% for below map ICI cloud and replace C:\ici-cloud-sections with Z:
+% see https://www.cores.emory.edu/ici/resources/ici-cloud.html
+
+%% Point Example - Map ICI Cloud and Replace C:\ici-cloud-sections with Z:
+% see https://www.cores.emory.edu/ici/resources/ici-cloud.html
+
 fpath = 'C:\ici-cloud-sections\WBRB Abberior STED\2021\Neil\2021-07-13 - FCS JF cali\TimeHarp_2021-07-13_11-17-19_pnt30s60pc.ptu';
-%fpath = 'Z:\WBRB Abberior STED\2021\ICI\Neil\2021-07-13 - FCS JF cali\TimeHarp_2021-07-13_12-05-48_sFCS60pc_b_fast.ptu';
+% use for point measurements
+[macrot, microt, decay] = import_point_ptu(fpath)
+
+
+
+%fpath = 'C:\ici-cloud-sections\WBRB Abberior STED\2021\Neil\2021-07-13 - FCS JF cali\TimeHarp_2021-07-13_12-05-48_sFCS60pc_b_fast.ptu';
+% use for scanning measurements
+[macrot, microt, decay, marktime, marktype, meta, deltat, Nc, C] = import_sfcs_ptu(fpath, sfcs)
+
+
+
 
 
 % convert backslash to forward slash;  other option would be to convert to

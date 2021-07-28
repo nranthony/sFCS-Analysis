@@ -1,9 +1,14 @@
-function [outputArg1,outputArg2] = import_ptu(fpath, sfcs)
+function [macrot, microt, decay, marktime, marktype, meta, deltat, Nc, C] = import_point_ptu(fpath)
+% fpath: full path with standard Windows backslash '\' and using '', not ""
+% sfcs: boolean for using sfcs, 1, or line fcs, 0
+% sfcs will use the one pixel between lineend and linestart as an
+% additional pixel in the circular scan
+% line will only use the pixels in the line between linestart and lineend
 
 
     %%  Set path
-
     % note '' creates char arrays, while "" creates Matlab strings
+    % example paths:
     %fpath = 'C:\ici-cloud-sections\WBRB Abberior STED\2021\Neil\2021-07-13 - FCS JF cali\TimeHarp_2021-07-13_12-05-48_sFCS60pc_b_fast.ptu';
     %fpath = 'Z:\WBRB Abberior STED\2021\ICI\Neil\2021-07-13 - FCS JF cali\TimeHarp_2021-07-13_12-05-48_sFCS60pc_b_fast.ptu';
 
@@ -68,7 +73,7 @@ function [outputArg1,outputArg2] = import_ptu(fpath, sfcs)
     % to line start gap #2->#4 is 1 x pixel, hence above pixX + 1
     % assumes 1,4,2,4,2... markers, i.e. single frame marker at the start
     tarr = [];
-    if (sFCS)
+    if (sfcs)
         for i=2:2:min([4000 length(mktimedelta)])
             tarr = [tarr, (mktimedelta(i)+mktimedelta(i+1))];
         end

@@ -1,22 +1,21 @@
+function [outputArg1,outputArg2] = import_ptu(fpath)
+
+
 %%  Set path
 
 % note '' creates char arrays, while "" creates Matlab strings
 %fpath = 'C:\ici-cloud-sections\WBRB Abberior STED\2021\Neil\2021-07-13 - FCS JF cali\TimeHarp_2021-07-13_12-05-48_sFCS60pc_b_fast.ptu';
-fpath = 'C:\ici-cloud-sections\WBRB Abberior STED\2021\Neil\2021-07-13 - FCS JF cali\TimeHarp_2021-07-13_11-17-19_pnt30s60pc.ptu';
 %fpath = 'Z:\WBRB Abberior STED\2021\ICI\Neil\2021-07-13 - FCS JF cali\TimeHarp_2021-07-13_12-05-48_sFCS60pc_b_fast.ptu';
-
 
 % convert backslash to forward slash;  other option would be to convert to
 % \\ to avoid \ being an escape character
 fpath = strrep(fpath,'\','/');
 
 %% compile if needed - mexw64 file should work as is on most Windows machines
-% needed for below ptu_data function call
 % requires compiler; recommend VS2019
-% uncomment below as needed and run
+% uncomment below two lines and run
 % clc
 % mex ptu_data.cpp
-% mex -g ptu_data.cpp % for debugging in VS2019
 
 %%  Load Data - Requires files in https://github.com/nranthony/TTTR/tree/master/PTU/MatLab
 % not needed if using other method to access count data
@@ -47,14 +46,6 @@ microt = microt(row(1):end);
 
 macrot = macrot - marktime(1); % this uses marker 1 as the t zero
 marktime = marktime - marktime(1); % also remove from marker time
-
-%% compile if needed - mexw64 file should work as is on most Windows machines
-% needed in correctedFCS.m
-% requires compiler; recommend VS2019
-% uncomment below as needed and run
-% clc
-% mex calcSymmetricACF.c
-% mex -g calcSymmetricACF.c % for debugging in VS2019
 
 %% Time Symmetric ACF
 
@@ -111,42 +102,5 @@ clear PixX;
 clear tarr;
 C = sum(marktype == 4) - 1;
 
-%% compile if needed - mexw64 file should work as is on most Windows machines
-% needed for below sfcsCarpet function call
-% requires compiler; recommend VS2019
-% uncomment below as needed and run
-% clc
-% mex sfcsCarpet.cpp 
-% mex -g sfcsCarpet.cpp % for debugging in VS2019
-
-%% Generate Carpet
-% __Inputs:
-% deltat: width of each pixel in laser pulses -> cycleTime / Nc  -> different with circular vs line scans
-% Nc: number of points in each 'cycle'
-% C: number of cycles, i.e. how many complete revolutions in entire dataset
-% microt: ps collection window of photon between laser pulses
-% macrot: number of laser pulses from beginning of dataset - note, time zero is modified to be the start of the first line/circle
-% marktime: number of pulses count for the frame and start/stop markers
-% marktype: index of marker type: 1-frame, 4-line start, 2-line end
-% __Outputs:
-% pixCounts: 2D array of photon counts binned into scan pixels
-% photonCarpet: cell array of corresponding pairs of microt and macrot arrays for each pixel
-[pixCounts, photonCarpet] = sfcsCarpet(uint32(deltat), uint32(Nc), uint32(C), uint16(microt), uint64(macrot), uint64(marktime), uint8(marktype));
-
-
-%% plot results - change units and edit limits for your needs
-
-% convert number of pulses to time scaled abcissa (here 25ns pulse to pulse
-% window
-cxus = double(cx) .* 0.025;  % converts to µs
-semilogx(cxus(1:length(cor)),cor);
-% y limits will likely need to be updated
-ylim([0.0 0.9]);
-xlim([0.07 1e7]);
-
-
-
-
-
-
+end
 
