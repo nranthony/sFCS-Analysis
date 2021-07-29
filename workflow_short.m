@@ -4,6 +4,8 @@
 % for below map ICI cloud and replace C:\ici-cloud-sections with Z:
 % see https://www.cores.emory.edu/ici/resources/ici-cloud.html
 
+%% note to self - change permissions on below folders
+
 %% Point Example
 fpath = 'C:\ici-cloud-sections\WBRB Abberior STED\2021\Neil\2021-07-13 - FCS JF cali\TimeHarp_2021-07-13_11-17-19_pnt30s60pc.ptu';
 % use for point measurements
@@ -27,15 +29,16 @@ fpath = 'C:\ici-cloud-sections\WBRB Abberior STED\2021\Neil\2021-07-13 - FCS JF 
 
 %% Time Symmetric ACF
 
-% generate log scaled tau
+% generate log scaled tau, see lag_time.m
 cx = lag_time(23,14);
 % optional: view lag times
 %semilogy(cx);
 
 % note correctedFCS uses parfor, and needs parallel processing kit
-% change to for if not installed
-% first run will take longer, but subsequent runs will be significantly
-% quicker depending on core count
+% change to 'for' if not installed
+% first run will take longer, and display error (sometimes)
+% subsequent runs will be significantly quicker depending on core count, and
+% not error
 tic;
 [cor, pwave] = correctedFCS(decay, macrot, microt, cx);
 cor = cor - 1;
@@ -72,7 +75,7 @@ toc;
 cxus = double(cx) .* 0.025;  % converts to µs
 semilogx(cxus(1:length(cor)),cor);
 % y limits will likely need to be updated
-ylim([0.0 0.9]);
+ylim([0.0 1.5]);
 xlim([0.07 1e7]);
 
 

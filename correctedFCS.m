@@ -9,7 +9,7 @@ function [cor, pwave] = correctedFCS(decay, macrot, microt, cx)
 
 %   cor --> returned corrrected autocorrelation function; same length as
 %   input cx
-%   pwave --> currently unknown; maybe error in acf
+%   pwave --> probability of afterpulsing
 
 % Resvised version of Procedure.ipf for use with Matlab, adapted from:
 % Correction of the afterpulsing effect in fluorescence correlation spectroscopy using time symmetry analysis
