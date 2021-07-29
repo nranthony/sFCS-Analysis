@@ -15,5 +15,7 @@ c = (1 + ttd .* (wxy/wz).^2).^(0.5);
 
 Gtau = Ginf + 1 ./ (a .* b .* c);
 
+Gtau = Gtau + err;
+
 end
 

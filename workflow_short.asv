@@ -9,12 +9,13 @@
 %% Point Example
 fpath = 'C:\ici-cloud-sections\WBRB Abberior STED\2021\Neil\2021-07-13 - FCS JF cali\TimeHarp_2021-07-13_11-17-19_pnt30s60pc.ptu';
 % use for point measurements
-[macrot, microt, decay] = import_point_ptu(fpath);
+[macrot, microt, decay, meta] = import_point_ptu(fpath);
 
 
 %% Scanning Example
 fpath = 'C:\ici-cloud-sections\WBRB Abberior STED\2021\Neil\2021-07-13 - FCS JF cali\TimeHarp_2021-07-13_12-05-48_sFCS60pc_b_fast.ptu';
 % use for scanning measurements
+sfcs = 1;
 [macrot, microt, decay, marktime, marktype, meta, deltat, Nc, C] = import_sfcs_ptu(fpath, sfcs);
 
 
@@ -30,7 +31,12 @@ fpath = 'C:\ici-cloud-sections\WBRB Abberior STED\2021\Neil\2021-07-13 - FCS JF 
 %% Time Symmetric ACF
 
 % generate log scaled tau, see lag_time.m
+% shorten cx to remove lag times < ###; here < 300ns
 cx = lag_time(23,14);
+cxus = double(cx) .* 0.025;  % converts to µs
+shortest_lag = 0.3; % 300 ns
+cx = cx(cxus >= shortest_lag);
+cxus = cxus(cxus >= shortest_lag);
 % optional: view lag times
 %semilogy(cx);
 
@@ -41,7 +47,6 @@ cx = lag_time(23,14);
 % not error
 tic;
 [cor, pwave] = correctedFCS(decay, macrot, microt, cx);
-cor = cor - 1;
 toc;
 
 

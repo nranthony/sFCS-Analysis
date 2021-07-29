@@ -1,57 +1,129 @@
-%% Sequential Data Split - Stationary Check
+%% Sequential Data Split - Stationary Check - Error Estimation
+% required for fitting - needs to be consistent across analyses
 
+% shorten cx to remove lag times < ###
+cx = lag_time(23,14);
+cxus = double(cx) .* 0.025;  % converts to µs
+shortest_lag = 0.3; % 300 ns
+cx = cx(cxus >= shortest_lag);
+cxus = cxus(cxus >= shortest_lag);
+
+% setup sequential spliting of photon counts
 split = 5; % aim for 50000 to 100000 photons, or more, per split
 split_len = floor(size(macrot,1)/split);
-cx = lag_time(23,14);
 ACFs = zeros(size(cx,1)-1,split);
 
+% decay histogram scaled; used to normalize in symmetricACF calc
 split_decay = double(decay) ./ split;
 for i = 1:split
     tStart = tic;
     sidx = ((i - 1) * split_len) + 1;
     eidx = (i * split_len);
     [cor, ~] = correctedFCS(split_decay, macrot(sidx:eidx), microt(sidx:eidx), cx);
-    cor = cor - 1;
     ACFs(:,i) = cor;
     tEnd = toc(tStart);
     fprintf('ACF(:,%d), photons counts %d -> %d; %.3f seconds.\n', i, sidx, eidx, tEnd);
 end
-
+% generate mean and std across all splits for each cx value
 ACFmean = mean(ACFs,2);
 ACFstd = std(ACFs,0,2);
+ACFvar = ACFstd.^2;
+
+
+
+%% SIDE NOTE __Error estimation__:
+%
+% Can use moving var:
+% e.g. we'd add a fraction of the array to itself in the fit function to
+% weight the loss/error during fitting; gtau = gtau + (gtau .* ACFall_var)
+%
+% Can generate error from difference between smoothed ACFall and ACFmean:
+% e.g. simply add the difference between the SG smoothed ACFall and the
+% ACFmean; gtau = gtau + (ACFmean - ACFsmthSG)
+% TODO - check smoothing window size for sFCS (not carpet) data
+%
+% Use square of ACFstd array; ACFstd.^2
+
+%  NOTE  --  Needs to be included in the fit function; therefore, needs to
+%  be positive and negative around the 'mean'
+%  - look to delta of smoothed ACFall and mean of sequential splits
+%  - err = ACFmean - ACFsmthSG;
+
+
+%% Plot All Splits and Mean +- Std - requires above variables
+
+ylim_upper = 1.5;
+
+% IMPORTANT!
+% plot all sequentially split ACFs to look for significant y offset
+% y offset between ACFs of different time windows can be due to aggregates
+% - note look for offsets at longer lag times, but ignore everything past a
+% lag time of ~ 1 second, 10^6 us
+figure
+hAx = axes;
+hAx.XScale = 'log';
+xlim([0.07 1e7]);
+ylim([-0.01 ylim_upper]);
+hold all
+cxplot = cxus(1:size(ACFs,1));
+for i = 1:split
+    semilogx(cxplot, ACFs(:,i));
+end
+
+% plots the mean with std error bars
+figure
+hAx=axes;
+hAx.XScale = 'log';
+xlim([0.07 1e7]);
+ylim([-0.01 ylim_upper]);
+hold all
+cxplot = cxus(1:length(ACFmean));
+errorbar(cxplot, ACFmean, ACFstd,'x');
+
+
+%% Use Smoothed ACFall - requires above variables
+
+% generate ACF for all data
+[ACFall, ~] = correctedFCS(decay, macrot, microt, cx);
+
+% set smoothing window size
+smth_window = 45;
+% smoothing types testing; I think SG will be best for changes seen in sfcs
+ACFsmthG = smoothdata(ACFall, 'gaussian', smth_window);
+ACFsmthM = smoothdata(ACFall, 'movmedian', smth_window);
+ACFsmthSG = smoothdata(ACFall, 'sgolay', smth_window);
+
+% auto scale y axis testing
+ACFall_var = movvar(ACFall, [0 6]); % moving variance 0 backwards, 6 + 1 forward
 
 figure
 hAx=axes;
 hAx.XScale = 'log';
 xlim([0.07 1e7]);
-ylim([-0.02 (mean(ACFmean(ACFmean > 0.1 & ACFmean < 10))*1.85)]);
+ylim([-0.01 ylim_upper]);
 hold all
-errorbar(cxus(1:length(cor)), ACFmean, ACFstd,'x');
+cxplot = cxus(1:length(ACFall));
+semilogx(cxplot, ACFall);
+semilogx(cxplot, ACFsmthG);
+semilogx(cxplot, ACFsmthM);
+semilogx(cxplot, ACFsmthSG);
+legend('ACF', 'Gauss', 'Median', 'Savitzky-Golay');
 
-figure
-hAx = axes;
-hAx.XScale = 'log';
-xlim([0.07 1e7]);
-ylim([-0.02 (mean(ACFmean(ACFmean > 0.1 & ACFmean < 10))*1.85)]);
-hold all
-cxplot = cxus(1:length(cor));
-for i = 1:split
-    semilogx(cxplot, ACFs(:,i));
-end
 
-%% Find Approx Parameters
 
-x0_norm = [3, 0.2, 1.8, 0.0001, 0.00001];
-Gtau = diff3DG(x0_norm, cxus);
+%% Find Approx Fit Parameters
+
+x0_nDif = [3, 0.2, 1.8, 0.0001, 0.00001];
+Gtau = diff3DG(x0_nDif, cxplot, zeros(length(cxplot),1));
  
 figure
 hAx=axes;
 hAx.XScale = 'log';
 xlim([0.07 1e7]);
-ylim([-0.02 (mean(ACFmean(ACFmean > 0.1 & ACFmean < 10))*1.85)]);
+ylim([-0.02 ylim_upper]);
 hold all
-errorbar(cxus(1:length(cor)), ACFmean, ACFstd,'x');
-semilogx(cxus,Gtau);
+errorbar(cxplot, ACFmean, ACFstd,'x');
+semilogx(cxplot,Gtau);
 
 %% Fit Functions - 3D Gauss, normal diff
 % C = x(1);
@@ -59,25 +131,52 @@ semilogx(cxus,Gtau);
 % wz = x(3);
 % D = x(4);
 % Ginf = x(5);
-x0_norm = [5, 0.4, 0.7, 0.02, 0.00001]; % see x() parameters in fit functions
 
-lb = [0.001, 0.39999999999999, 0.6999999999999, 0.000001, -0.5];
-ub = [100000, 0.4000000000001, 0.7000000000001, 1000000, 0.5];
+% wxy and wz are the 1/e point of the assumed 3D Gaussian volume
+wxy = 0.2;
+wz = 1.8;
+x0_nDif = [3, wxy, wz, 0.0002, 0.00001]; % see x() parameters in fit functions
 
+lb = [0.001, wxy, wz, 0.000001, -0.05];
+ub = [100000, wxy, wz, 1000000, 0.5];
+
+xdata = cxplot; % use microsecond cx array for xdata
+ydata = zeros(size(xdata,1),1); % create empty ydata
+
+% err = ACFvar; % does not work as all positive
+err = ACFmean - ACFsmthSG; % change to be 'normalized' to some degree; now multiplying in diff3DG
+errAbs = abs(err);
+err = err ./ max(errAbs);
+
+% function reference below 'fills' the call with current xdata and err;
+% call function reference again if/when arrays change
 func = @(x) diff3DG(x, xdata, err);
 
-xdata = cxus; % use microsecond cx array for xdata
-ydata = zeros(size(xdata,1),1); % create empty ydata
+% set options
+options.Algorithm = 'levenberg-marquardt';
+% options.Algorithm = 'trust-region-reflective';
+options.Display = 'iter'; % comment out if annoying
 % fit with diff3DG fit function
-x_norm = lsqcurvefit(@diff3DG, x0_norm, ub, lb, xdata, ydata);
+% [x,resnorm,residual,exitflag,output] = lsqcurvefit(fun,x0,xdata,ydata,lb,ub,options)
+%[x_nDif,resnorm,residual,exitflag,output] = lsqcurvefit(func,x0_nDif,xdata,ydata,lb,ub,options);
 
-figure
-semilogx(cxus(1:length(cor)),cor);
-% y limits will likely need to be updated
-ylim([0.0 1.5]);
+% [x,resnorm,residual,exitflag,output] = lsqnonlin(fun,x0,lb,ub,options)
+[x_nDif,resnorm,residual,exitflag,output] = lsqnonlin(func,x0_nDif,lb,ub,options);
+
+
+Gtau = diff3DG(x_nDif, xdata, zeros(length(cxplot),1));
+
+% Gtau = diff3DG(x_nDif, xdata, err);
+
+
+tiledlayout(4,1);
+hAx = nexttile(1,[3 1]);
+hAx.XScale = 'log';
 xlim([0.07 1e7]);
+ylim([-0.02 ylim_upper]);
 hold on
-semilogx(cxus, Gtau);
+errorbar(cxplot, ACFmean, ACFstd,'x');
+semilogx(cxplot, Gtau);
 
 
 %% Fit Functions - 3D Gauss, anomalous diff
@@ -125,13 +224,13 @@ end
 
 %% use cross_corr TTTR Matlab Exhange code
 [ps_times] = create_abs_ps_times(macrot, microt);
-[corr_norm, lags] = cross_corr(ps_times, ps_times, 1000000, 10000000000000, 10, 0);
+[corr_nDif, lags] = cross_corr(ps_times, ps_times, 1000000, 10000000000000, 10, 0);
 
 figure
 lagsus = lags .* 1E-6; % create microsecond lags
-corr_norm = corr_norm - 1; % given we're using intensities/counts, not delta int/counts
+corr_nDif = corr_nDif - 1; % given we're using intensities/counts, not delta int/counts
 
-semilogx(lagsus, corr_norm);
+semilogx(lagsus, corr_nDif);
 ylim([1 1.1])
 xlim([0.1 1e6])
 
@@ -157,11 +256,11 @@ end
 %% loop through resolution options in cross_corr
 
 corr_cells = cell(10,2);
-%corr_cells(1,:) = {corr_norm, lags};
+%corr_cells(1,:) = {corr_nDif, lags};
 
 parfor i = 1 : 10
-    [corr_norm, lags] = cross_corr(ps_times, ps_times, 1000000, 10000000000000, i, 0);
-    corr_cells(i,:) = {corr_norm, lags .* 1E-6};
+    [corr_nDif, lags] = cross_corr(ps_times, ps_times, 1000000, 10000000000000, i, 0);
+    corr_cells(i,:) = {corr_nDif, lags .* 1E-6};
 end
 
 %% plot different resolution options

@@ -69,7 +69,6 @@ cx = lag_time(23,14);
 % quicker depending on core count
 tic;
 [cor, pwave] = correctedFCS(decay, macrot, microt, cx);
-cor = cor - 1;
 toc;
 
 %% Prep for sFCS/lineFCS Carpet

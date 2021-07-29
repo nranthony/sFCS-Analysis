@@ -1,4 +1,4 @@
-function [macrot, microt, decay] = import_point_ptu(fpath)
+function [macrot, microt, decay, meta] = import_point_ptu(fpath)
 % fpath: full path with standard Windows backslash '\' and using '', not ""
 
     % convert backslash to forward slash;  other option would be to convert to
@@ -28,7 +28,7 @@ function [macrot, microt, decay] = import_point_ptu(fpath)
     % meta: cell array of related metadata from ptu header
     % fpath: full filepath as char, not Matlab string
     % boolean flag: 1,0 for display header in command window
-    [macrot, microt, decay, marktime, marktype, meta] = ptu_data(fpath, 0);
+    [macrot, microt, decay, marktime, marktype, meta] = ptu_data(fpath, 1);
 
     %% Remove Points Prior to Frame Marker and Set First Point to Time Zero
 

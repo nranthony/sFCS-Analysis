@@ -92,8 +92,8 @@ function [cor, pwave] = correctedFCS(decay, macrot, microt, cx)
         
 		pwave(i) = c / dtau .* maxt ./ ( maxt - tau - 0.5 .* dtau);
 
-	end
+    end
 	
-
+    cor = cor - 1;
 end
 

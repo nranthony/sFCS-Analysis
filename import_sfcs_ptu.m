@@ -19,8 +19,8 @@ function [macrot, microt, decay, marktime, marktype, meta, deltat, Nc, C] = impo
     %% compile if needed - mexw64 file should work as is on most Windows machines
     % requires compiler; recommend VS2019
     % uncomment below two lines and run
-    % clc
-    % mex ptu_data.cpp
+    clc
+    mex -g ptu_data.cpp
 
     %%  Load Data - Requires files in https://github.com/nranthony/TTTR/tree/master/PTU/MatLab
     % not needed if using other method to access count data

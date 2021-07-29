@@ -1,4 +1,4 @@
-function Gtau = diff3DG(x, xdata)
+function Gtau = diff3DG(x, xdata, err)
 %% 3D Gaussian PSF, single component, normal diffusion
 C = x(1);
 wxy = x(2);
@@ -13,6 +13,9 @@ b = 1 + ttd;
 c = (1 + ttd .* (wxy/wz).^2).^(0.5);
 
 Gtau = Ginf + 1 ./ (a .* b .* c);
+
+Gtau = Gtau + (Gtau .* err);
+% Gtau = Gtau .* err;
 
 end
 
