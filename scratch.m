@@ -24,12 +24,19 @@ for i = 1:split
     tEnd = toc(tStart);
     fprintf('ACF(:,%d), photons counts %d -> %d; %.3f seconds.\n', i, sidx, eidx, tEnd);
 end
+
+clear tStart tEnd sidx eidx shortest_lag i;
+
 % generate mean and std across all splits for each cx value
 ACFmean = mean(ACFs,2);
 ACFstd = std(ACFs,0,2);
 ACFvar = ACFstd.^2;
 
-
+% generate ACF for all data
+[ACFall, ~] = correctedFCS(decay, macrot, microt, cx);
+% auto scale y axis testing
+ACFall_var = movvar(ACFall, [0 6]); % moving variance 0 backwards, 6 + 1 forward
+ylim_upper = mean(ACFall(ACFall_var < 0.01 & ACFall_var > 0.0007)) .* 1.85;
 
 %% SIDE NOTE __Error estimation__:
 %
@@ -51,8 +58,6 @@ ACFvar = ACFstd.^2;
 
 
 %% Plot All Splits and Mean +- Std - requires above variables
-
-ylim_upper = 1.5;
 
 % IMPORTANT!
 % plot all sequentially split ACFs to look for significant y offset
@@ -83,9 +88,6 @@ errorbar(cxplot, ACFmean, ACFstd,'x');
 
 %% Use Smoothed ACFall - requires above variables
 
-% generate ACF for all data
-[ACFall, ~] = correctedFCS(decay, macrot, microt, cx);
-
 % set smoothing window size
 smth_window = 45;
 % smoothing types testing; I think SG will be best for changes seen in sfcs
@@ -93,8 +95,6 @@ ACFsmthG = smoothdata(ACFall, 'gaussian', smth_window);
 ACFsmthM = smoothdata(ACFall, 'movmedian', smth_window);
 ACFsmthSG = smoothdata(ACFall, 'sgolay', smth_window);
 
-% auto scale y axis testing
-ACFall_var = movvar(ACFall, [0 6]); % moving variance 0 backwards, 6 + 1 forward
 
 figure
 hAx=axes;
