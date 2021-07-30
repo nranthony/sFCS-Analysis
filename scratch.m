@@ -38,6 +38,65 @@ ACFvar = ACFstd.^2;
 ACFall_var = movvar(ACFall, [0 6]); % moving variance 0 backwards, 6 + 1 forward
 ylim_upper = mean(ACFall(ACFall_var < 0.01 & ACFall_var > 0.0007)) .* 1.85;
 
+%% Fiting Using Standard fit(...) Command
+
+
+tau = cxus(1:size(ACFs,1));
+
+% point FCS
+ft = fittype('diff3DG(tau, C, wxy, wz, D, Ginf)', ...
+    'coefficients', {'C', 'wxy', 'wz', 'D', 'Ginf'}, ...
+    'dependent', {'Gtau'}, ...
+    'independent', {'tau'});
+
+wxy = 0.2;
+wz = 1.8;
+coef_0 = [3, wxy, wz, 0.002, 0.00001]; % see x() parameters in fit functions
+lb = [0.001, wxy, wz, 0.000001, 0];
+ub = [1000, wxy, wz, 10, 0.05];
+fitOptions = fitoptions( ...
+    'Method', 'NonlinearLeastSquares', ...
+    'Lower', lb, 'Upper', ub, ...
+    'Display', 'iter', ...
+    'Weights', ACFstd);
+
+f = fit( tau, ACFmean, ft, 'StartPoint', coef_0);
+
+% scanning FCS circular
+ft = fittype('diff3DG_SFCS(tau, C, wxy, wz, D, Ginf, R, f)', ...
+    'coefficients', {'C', 'wxy', 'wz', 'D', 'Ginf', 'R', 'f'}, ...
+    'dependent', {'Gtau'}, ...
+    'independent', {'tau'});
+
+wxy = 0.2;
+wz = 1.8;
+R = 0.5; % ExpControl X 500nm in Abberior htm meta export
+f = 1 / (double(Nc) .* meta{1,5} .* 1000); % frequency
+coef_0 = [6, wxy, wz, 0.002, 0.00001, R, f]; % see x() parameters in fit functions
+lb = [0.001, wxy, wz, 0.000001, 0, R, f];
+ub = [1000, wxy, wz, 10, 0.05, R, f];
+fitOptions = fitoptions( ...
+    'Method', 'NonlinearLeastSquares', ...
+    'Lower', lb, 'Upper', ub, ...
+    'Display', 'iter', ...
+    'Weights', ACFstd);
+
+f = fit( tau, ACFmean, ft, 'StartPoint', coef_0);
+
+Gtau = diff3DG_SFCS(tau, 3, wxy, wz, 0.002, 0, R, f);
+
+
+figure
+hAx = axes;
+hAx.XScale = 'log';
+xlim([0.07 1e7]);
+ylim([-0.01 ylim_upper]);
+hold all
+plot( tau, Gtau );
+
+plot( f, tau, ACFmean );
+
+
 %% SIDE NOTE __Error estimation__:
 %
 % Can use moving var:
@@ -56,6 +115,7 @@ ylim_upper = mean(ACFall(ACFall_var < 0.01 & ACFall_var > 0.0007)) .* 1.85;
 %  - look to delta of smoothed ACFall and mean of sequential splits
 %  - err = ACFmean - ACFsmthSG;
 
+% Follow Up - Smoothing too smooth for sFCS decay
 
 %% Plot All Splits and Mean +- Std - requires above variables
 

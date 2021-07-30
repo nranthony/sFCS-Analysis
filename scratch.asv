@@ -25,7 +25,7 @@ for i = 1:split
     fprintf('ACF(:,%d), photons counts %d -> %d; %.3f seconds.\n', i, sidx, eidx, tEnd);
 end
 
-clear tStart tEnd sidx eidx;
+clear tStart tEnd sidx eidx shortest_lag i;
 
 % generate mean and std across all splits for each cx value
 ACFmean = mean(ACFs,2);
@@ -36,7 +36,61 @@ ACFvar = ACFstd.^2;
 [ACFall, ~] = correctedFCS(decay, macrot, microt, cx);
 % auto scale y axis testing
 ACFall_var = movvar(ACFall, [0 6]); % moving variance 0 backwards, 6 + 1 forward
-%ylim_upper = mean(ACFall(ACFall_var
+ylim_upper = mean(ACFall(ACFall_var < 0.01 & ACFall_var > 0.0007)) .* 1.85;
+
+%% Fiting Using Standard fit(...) Command
+
+tau = cxus(1:size(ACFs,1));
+
+ft = fittype('diff3DG(tau, C, wxy, wz, D, Ginf)', ...
+    'coefficients', {'C', 'wxy', 'wz', 'D', 'Ginf'}, ...
+    'dependent', {'Gtau'}, ...
+    'independent', {'tau'});
+
+wxy = 0.2;
+wz = 1.8;
+coef_0 = [6, wxy, wz, 0.002, 0.00001]; % see x() parameters in fit functions
+lb = [0.001, wxy, wz, 0.000001, 0];
+ub = [1000, wxy, wz, 10, 0.05];
+fitOptions = fitoptions( ...
+    'Method', 'NonlinearLeastSquares', ...
+    'Lower', lb, 'Upper', ub, ...
+    'Display', 'iter', ...
+    'Weights', ACFstd);
+
+f = fit( tau, ACFmean, ft, 'StartPoint', coef_0);
+
+% 
+ft = fittype('diff3DG_SFCS(tau, C, wxy, wz, D, Ginf, R, f)', ...
+    'coefficients', {'C', 'wxy', 'wz', 'D', 'Ginf', 'R', 'f'}, ...
+    'dependent', {'Gtau'}, ...
+    'independent', {'tau'});
+
+wxy = 0.2;
+wz = 1.8;
+R = 0.5; % ExpControl X 500nm in Abberior htm meta export
+f = 1 / (double(Nc) .* meta{1,5} .* 0.001); % frequency in Hz
+coef_0 = [6, wxy, wz, 0.002, 0.00001, R, f]; % see x() parameters in fit functions
+lb = [0.001, wxy, wz, 0.000001, 0, R, f];
+ub = [1000, wxy, wz, 10, 0.05, R, f];
+fitOptions = fitoptions( ...
+    'Method', 'NonlinearLeastSquares', ...
+    'Lower', lb, 'Upper', ub, ...
+    'Display', 'iter', ...
+    'Weights', ACFstd);
+
+f = fit( tau, ACFmean, ft, 'StartPoint', coef_0);
+
+
+
+figure
+hAx = axes;
+hAx.XScale = 'log';
+xlim([0.07 1e7]);
+ylim([-0.01 ylim_upper]);
+hold all
+
+plot( f, tau, ACFmean );
 
 %% SIDE NOTE __Error estimation__:
 %
@@ -56,10 +110,9 @@ ACFall_var = movvar(ACFall, [0 6]); % moving variance 0 backwards, 6 + 1 forward
 %  - look to delta of smoothed ACFall and mean of sequential splits
 %  - err = ACFmean - ACFsmthSG;
 
+% Follow Up - Smoothing too smooth for sFCS decay
 
 %% Plot All Splits and Mean +- Std - requires above variables
-
-ylim_upper = 1.5;
 
 % IMPORTANT!
 % plot all sequentially split ACFs to look for significant y offset
