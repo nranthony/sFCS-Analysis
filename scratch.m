@@ -1,17 +1,17 @@
 %% Sequential Data Split - Stationary Check - Error Estimation
 % required for fitting - needs to be consistent across analyses
 
-% shorten cx to remove lag times < ###
-cx = lag_time(23,14);
-cxus = double(cx) .* 0.025;  % converts to µs
+% shorten tau to remove lag times < ###
+tau = lag_time(23,14);
+tauus = double(tau) .* 0.025;  % converts to µs
 shortest_lag = 0.3; % 300 ns
-cx = cx(cxus >= shortest_lag);
-cxus = cxus(cxus >= shortest_lag);
+tau = tau(tauus >= shortest_lag);
+tauus = tauus(tauus >= shortest_lag);
 
 % setup sequential spliting of photon counts
 split = 5; % aim for 50000 to 100000 photons, or more, per split
 split_len = floor(size(macrot,1)/split);
-ACFs = zeros(size(cx,1)-1,split);
+ACFs = zeros(size(tau,1)-1,split);
 
 % decay histogram scaled; used to normalize in symmetricACF calc
 split_decay = double(decay) ./ split;
@@ -19,7 +19,7 @@ for i = 1:split
     tStart = tic;
     sidx = ((i - 1) * split_len) + 1;
     eidx = (i * split_len);
-    [cor, ~] = correctedFCS(split_decay, macrot(sidx:eidx), microt(sidx:eidx), cx);
+    [cor, ~] = correctedFCS(split_decay, macrot(sidx:eidx), microt(sidx:eidx), tau);
     ACFs(:,i) = cor;
     tEnd = toc(tStart);
     fprintf('ACF(:,%d), photons counts %d -> %d; %.3f seconds.\n', i, sidx, eidx, tEnd);
@@ -27,13 +27,13 @@ end
 
 clear tStart tEnd sidx eidx shortest_lag i;
 
-% generate mean and std across all splits for each cx value
+% generate mean and std across all splits for each tau value
 ACFmean = mean(ACFs,2);
 ACFstd = std(ACFs,0,2);
 ACFvar = ACFstd.^2;
 
 % generate ACF for all data
-[ACFall, ~] = correctedFCS(decay, macrot, microt, cx);
+[ACFall, ~] = correctedFCS(decay, macrot, microt, tau);
 % auto scale y axis testing
 ACFall_var = movvar(ACFall, [0 6]); % moving variance 0 backwards, 6 + 1 forward
 ylim_upper = mean(ACFall(ACFall_var < 0.01 & ACFall_var > 0.0007)) .* 1.85;
@@ -41,7 +41,7 @@ ylim_upper = mean(ACFall(ACFall_var < 0.01 & ACFall_var > 0.0007)) .* 1.85;
 %% Fiting Using Standard fit(...) Command
 
 
-tau = cxus(1:size(ACFs,1));
+tau = tauus(1:size(ACFs,1));
 
 % point FCS
 ft = fittype('diff3DG(tau, C, wxy, wz, D, Ginf)', ...
@@ -130,9 +130,9 @@ hAx.XScale = 'log';
 xlim([0.07 1e7]);
 ylim([-0.01 ylim_upper]);
 hold all
-cxplot = cxus(1:size(ACFs,1));
+tauplot = tauus(1:size(ACFs,1));
 for i = 1:split
-    semilogx(cxplot, ACFs(:,i));
+    semilogx(tauplot, ACFs(:,i));
 end
 
 % plots the mean with std error bars
@@ -142,8 +142,8 @@ hAx.XScale = 'log';
 xlim([0.07 1e7]);
 ylim([-0.01 ylim_upper]);
 hold all
-cxplot = cxus(1:length(ACFmean));
-errorbar(cxplot, ACFmean, ACFstd,'x');
+tauplot = tauus(1:length(ACFmean));
+errorbar(tauplot, ACFmean, ACFstd,'x');
 
 
 %% Use Smoothed ACFall - requires above variables
@@ -162,11 +162,11 @@ hAx.XScale = 'log';
 xlim([0.07 1e7]);
 ylim([-0.01 ylim_upper]);
 hold all
-cxplot = cxus(1:length(ACFall));
-semilogx(cxplot, ACFall);
-semilogx(cxplot, ACFsmthG);
-semilogx(cxplot, ACFsmthM);
-semilogx(cxplot, ACFsmthSG);
+tauplot = tauus(1:length(ACFall));
+semilogx(tauplot, ACFall);
+semilogx(tauplot, ACFsmthG);
+semilogx(tauplot, ACFsmthM);
+semilogx(tauplot, ACFsmthSG);
 legend('ACF', 'Gauss', 'Median', 'Savitzky-Golay');
 
 
@@ -174,7 +174,7 @@ legend('ACF', 'Gauss', 'Median', 'Savitzky-Golay');
 %% Find Approx Fit Parameters
 
 x0_nDif = [3, 0.2, 1.8, 0.0001, 0.00001];
-Gtau = diff3DG(x0_nDif, cxplot, zeros(length(cxplot),1));
+Gtau = diff3DG(x0_nDif, tauplot, zeros(length(tauplot),1));
  
 figure
 hAx=axes;
@@ -182,8 +182,8 @@ hAx.XScale = 'log';
 xlim([0.07 1e7]);
 ylim([-0.02 ylim_upper]);
 hold all
-errorbar(cxplot, ACFmean, ACFstd,'x');
-semilogx(cxplot,Gtau);
+errorbar(tauplot, ACFmean, ACFstd,'x');
+semilogx(tauplot,Gtau);
 
 %% Fit Functions - 3D Gauss, normal diff
 % C = x(1);
@@ -200,7 +200,7 @@ x0_nDif = [3, wxy, wz, 0.0002, 0.00001]; % see x() parameters in fit functions
 lb = [0.001, wxy, wz, 0.000001, -0.05];
 ub = [100000, wxy, wz, 1000000, 0.5];
 
-xdata = cxplot; % use microsecond cx array for xdata
+xdata = tauplot; % use microsecond tau array for xdata
 ydata = zeros(size(xdata,1),1); % create empty ydata
 
 % err = ACFvar; % does not work as all positive
@@ -224,7 +224,7 @@ options.Display = 'iter'; % comment out if annoying
 [x_nDif,resnorm,residual,exitflag,output] = lsqnonlin(func,x0_nDif,lb,ub,options);
 
 
-Gtau = diff3DG(x_nDif, xdata, zeros(length(cxplot),1));
+Gtau = diff3DG(x_nDif, xdata, zeros(length(tauplot),1));
 
 % Gtau = diff3DG(x_nDif, xdata, err);
 
@@ -235,8 +235,8 @@ hAx.XScale = 'log';
 xlim([0.07 1e7]);
 ylim([-0.02 ylim_upper]);
 hold on
-errorbar(cxplot, ACFmean, ACFstd,'x');
-semilogx(cxplot, Gtau);
+errorbar(tauplot, ACFmean, ACFstd,'x');
+semilogx(tauplot, Gtau);
 
 
 %% Fit Functions - 3D Gauss, anomalous diff
@@ -248,7 +248,7 @@ semilogx(cxplot, Gtau);
 % alpha = x(6);
 x0_anom = [100, 0.4, 0.7, 0.02, 0.00001, 0.9]; % see x() parameters in fit functions
 
-xdata = cxus; % use microsecond cx array for xdata
+xdata = tauus; % use microsecond tau array for xdata
 ydata = zeros(size(xdata,1),1); % create empty ydata
 % fit with diff3DG fit function
 x_anom = lsqcurvefit(@anomalousDiff3DG, x0_anom, xdata, ydata);

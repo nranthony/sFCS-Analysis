@@ -59,16 +59,16 @@ marktime = marktime - marktime(1); % also remove from marker time
 %% Time Symmetric ACF
 
 % generate log scaled tau
-cx = lag_time(23,14);
+tau = lag_time(23,14);
 % optional: view lag times
-%semilogy(cx);
+%semilogy(tau);
 
 % note correctedFCS uses parfor, and needs parallel processing kit
 % change to for if not installed
 % first run will take longer, but subsequent runs will be significantly
 % quicker depending on core count
 tic;
-[cor, pwave] = correctedFCS(decay, macrot, microt, cx);
+[cor, pwave] = correctedFCS(decay, macrot, microt, tau);
 toc;
 
 %% Prep for sFCS/lineFCS Carpet
@@ -137,8 +137,8 @@ C = sum(marktype == 4) - 1;
 
 % convert number of pulses to time scaled abcissa (here 25ns pulse to pulse
 % window
-cxus = double(cx) .* 0.025;  % converts to µs
-semilogx(cxus(1:length(cor)),cor);
+tauus = double(tau) .* 0.025;  % converts to µs
+semilogx(tauus(1:length(cor)),cor);
 % y limits will likely need to be updated
 ylim([0.0 0.9]);
 xlim([0.07 1e7]);

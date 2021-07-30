@@ -31,14 +31,14 @@ sfcs = 1;
 %% Time Symmetric ACF
 
 % generate log scaled tau, see lag_time.m
-% shorten cx to remove lag times < ###; here < 300ns
-cx = lag_time(23,14);
-cxus = double(cx) .* 0.025;  % converts to µs
+% shorten tau to remove lag times < ###; here < 300ns
+tau = lag_time(23,14);
+tauus = double(tau) .* 0.025;  % converts to µs
 shortest_lag = 0.3; % 300 ns
-cx = cx(cxus >= shortest_lag);
-cxus = cxus(cxus >= shortest_lag);
+tau = tau(tauus >= shortest_lag);
+tauus = tauus(tauus >= shortest_lag);
 % optional: view lag times
-%semilogy(cx);
+%semilogy(tau);
 
 % note correctedFCS uses parfor, and needs parallel processing kit
 % change to 'for' if not installed
@@ -46,7 +46,7 @@ cxus = cxus(cxus >= shortest_lag);
 % subsequent runs will be significantly quicker depending on core count, and
 % not error
 tic;
-[cor, pwave] = correctedFCS(decay, macrot, microt, cx);
+[cor, pwave] = correctedFCS(decay, macrot, microt, tau);
 toc;
 
 
@@ -77,8 +77,8 @@ toc;
 
 % convert number of pulses to time scaled abcissa (here 25ns pulse to pulse
 % window
-cxus = double(cx) .* 0.025;  % converts to µs
-semilogx(cxus(1:length(cor)),cor);
+tauus = double(tau) .* 0.025;  % converts to µs
+semilogx(tauus(1:length(cor)),cor);
 % y limits will likely need to be updated
 ylim([0.0 1.5]);
 xlim([0.07 1e7]);
